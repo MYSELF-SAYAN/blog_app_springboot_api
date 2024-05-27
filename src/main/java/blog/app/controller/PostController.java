@@ -4,6 +4,9 @@ import blog.app.model.Post;
 import blog.app.model.PostCreationRequest;
 import blog.app.service.AuthService;
 import blog.app.service.PostService;
+import blog.app.service.RedisService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +22,12 @@ public class PostController {
     private PostService postService;
     @Autowired
     private AuthService authService;
-    @PostMapping ("/{parentId}")
+    @Autowired
+    private RedisService redisService;
+    private static final Logger logger = LoggerFactory.getLogger(PostController.class);
 
-    // Create a new post
+    @PostMapping ("/{parentId}")
+// Create a new post
     public ResponseEntity<String> createPost(@RequestBody PostCreationRequest postCreationRequest){
         try{
             Optional<String> response = postService.createPost(postCreationRequest);
@@ -34,6 +40,7 @@ public class PostController {
             }
         }
         catch (Exception e){
+            logger.error("Error creating post: "+e.getMessage());
             return new ResponseEntity<String>("Error creating post", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -77,8 +84,17 @@ public class PostController {
     @GetMapping("/")
     public ResponseEntity<List<Post>> getAllPosts(){
         try{
-            return new ResponseEntity<List<Post>>(postService.getAllPosts(), HttpStatus.OK);
-        }
+            List<Post> cachedPost= redisService.getAllPostsFromCache("allPosts");
+            if(cachedPost != null){
+                return new ResponseEntity<List<Post>>(cachedPost, HttpStatus.OK);
+            }
+            else{
+                List<Post> posts = postService.getAllPosts();
+                redisService.setAllPostsToCache("allPosts", posts, 600);
+                logger.info("Posts fetched from database");
+                return  new ResponseEntity<List<Post>>(posts, HttpStatus.OK);
+            }
+       }
         catch (Exception e){
             return new ResponseEntity<List<Post>>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -89,7 +105,18 @@ public class PostController {
     public ResponseEntity<List<Post>>  getPostsByUser (@PathVariable String userId){
        try{
               if(authService.isUserPresent(userId)){
-                return new ResponseEntity<List<Post>>(postService.getPostByUser(userId), HttpStatus.OK);
+                  List<Post> cachedPost= redisService.getAllPostsFromCache("user"+userId);
+                  if(cachedPost != null){
+                      logger.info("Posts fetched from cache");
+                      return new ResponseEntity<List<Post>>(cachedPost, HttpStatus.OK);
+                  }
+                  else{
+                      List<Post> posts = postService.getPostByUser(userId);
+                      redisService.setAllPostsToCache("user"+userId, posts, 20);
+                      logger.info("Posts fetched from database");
+                      return  new ResponseEntity<List<Post>>(posts, HttpStatus.OK);
+                  }
+
               }
               else{
                 return new ResponseEntity<List<Post>>(HttpStatus.NOT_FOUND);

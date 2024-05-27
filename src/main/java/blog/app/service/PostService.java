@@ -20,6 +20,8 @@ public class PostService {
     private PostRepository postRepository;
     @Autowired
     private AuthRepository authRepository;
+    @Autowired
+    private RedisService redisService;
 
     public Optional<String> createPost(PostCreationRequest postCreationRequest){
         Post post = new Post();

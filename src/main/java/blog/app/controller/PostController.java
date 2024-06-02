@@ -3,6 +3,7 @@ package blog.app.controller;
 import blog.app.model.Post;
 import blog.app.model.PostCreationRequest;
 import blog.app.service.AuthService;
+import blog.app.service.ImageUploadImpl;
 import blog.app.service.PostService;
 import blog.app.service.RedisService;
 import org.slf4j.Logger;
@@ -24,16 +25,19 @@ public class PostController {
     private AuthService authService;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private ImageUploadImpl imageUpload;
+
     private static final Logger logger = LoggerFactory.getLogger(PostController.class);
 
-    @PostMapping ("/{parentId}")
+    @PostMapping(value = "/{parentId}")
 // Create a new post
     public ResponseEntity<String> createPost(@RequestBody PostCreationRequest postCreationRequest){
         try{
             Optional<String> response = postService.createPost(postCreationRequest);
             if(response.isPresent()){
                 postService.addPostToUser(response.get(), postCreationRequest.getAuthorId());
-                return new ResponseEntity<String>("Post created successfully", HttpStatus.CREATED);
+                return new ResponseEntity<String>(response.get(), HttpStatus.CREATED);
             }
             else{
                 return new ResponseEntity<String>("Error creating post", HttpStatus.INTERNAL_SERVER_ERROR);

@@ -6,11 +6,10 @@ import blog.app.model.User;
 import blog.app.repository.AuthRepository;
 import blog.app.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,10 +24,13 @@ public class PostService {
 
     public Optional<String> createPost(PostCreationRequest postCreationRequest){
         Post post = new Post();
+
         post.setTitle(postCreationRequest.getTitle());
+        post.setAuthorName(postCreationRequest.getAuthorName() );
         post.setContent(postCreationRequest.getContent());
         post.setAuthorId(postCreationRequest.getAuthorId());
-        post.setImageUrl(postCreationRequest.getImageUrl());
+       post.setImageUrl(postCreationRequest.getImageUrl());
+       post.setCreatedAt(new Date());
         post.setTags(postCreationRequest.getTags());
         Post savedpost=postRepository.save(post);
         return Optional.of(savedpost.getId());
